@@ -5,5 +5,11 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
-  }
+  },
+  "scripts": {
+  "build:offline": "node package-offline.mjs index.html",
+  "build:pages": "node --input-type=module -e \"import {mkdirSync,copyFileSync} from 'node:fs'; mkdirSync('docs',{recursive:true}); copyFileSync('dist/bone-atlas-offline.html','docs/index.html');\"",
+  "build": "npm run build:offline && npm run build:pages"
+}
+
 }
