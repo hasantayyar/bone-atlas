@@ -338,111 +338,52 @@
   <script type="module">
     const $ = id => document.getElementById(id);
 
-    const anatomicalLandmarks = {
-      'atlas (c1)': [
-        'Anterior arch', 'Posterior arch', 'Lateral mass',
-        'Transverse foramen', 'Superior articular facet'
-      ],
-      'axis (c2)': [
-        'Dens', 'Body', 'Spinous process', 'Transverse foramen',
-        'Superior articular facet'
-      ],
-      'calcaneus': [
-        'Calcaneal tuberosity', 'Sustentaculum tali',
-        'Peroneal trochlea', 'Talocalcaneal facets'
-      ],
-      'clavicle': [
-        'Sternal end', 'Acromial end', 'Conoid tubercle',
-        'Trapezoid line', 'Subclavian groove'
-      ],
-      'femur': [
-        'Head', 'Fovea capitis', 'Neck', 'Greater trochanter',
-        'Lesser trochanter', 'Intertrochanteric line',
-        'Intertrochanteric crest', 'Linea aspera', 'Medial condyle',
-        'Lateral condyle', 'Intercondylar fossa', 'Patellar surface'
-      ],
-      'fibula': [
-        'Head', 'Apex of head', 'Neck', 'Shaft',
-        'Interosseous border', 'Lateral malleolus', 'Malleolar fossa'
-      ],
-      'frontal bone': [
-        'Frontal squama', 'Supraorbital margin', 'Supraorbital notch',
-        'Glabella', 'Zygomatic process'
-      ],
-      'hip bone': [
-        'Iliac crest', 'Anterior superior iliac spine',
-        'Posterior superior iliac spine', 'Greater sciatic notch',
-        'Ischial spine', 'Ischial tuberosity', 'Acetabulum',
-        'Obturator foramen', 'Pubic tubercle'
-      ],
-      'humerus': [
-        'Head', 'Anatomical neck', 'Surgical neck',
-        'Greater tubercle', 'Lesser tubercle', 'Deltoid tuberosity',
-        'Radial groove', 'Capitulum', 'Trochlea',
-        'Medial epicondyle', 'Lateral epicondyle', 'Olecranon fossa'
-      ],
-      'mandible': [
-        'Body', 'Ramus', 'Angle', 'Mental protuberance',
-        'Mental foramen', 'Mandibular foramen', 'Coronoid process',
-        'Condylar process', 'Mandibular notch'
-      ],
-      'maxilla': [
-        'Alveolar process', 'Frontal process', 'Zygomatic process',
-        'Palatine process', 'Infraorbital foramen', 'Maxillary sinus'
-      ],
-      'occipital bone': [
-        'Foramen magnum', 'Occipital condyle',
-        'External occipital protuberance', 'Hypoglossal canal',
-        'Superior nuchal line'
-      ],
-      'patella': [
-        'Base', 'Apex', 'Medial border', 'Lateral border',
-        'Medial articular facet', 'Lateral articular facet'
-      ],
-      'radius': [
-        'Head', 'Neck', 'Radial tuberosity', 'Interosseous border',
-        'Ulnar notch', 'Dorsal tubercle', 'Styloid process'
-      ],
-      'sacrum': [
-        'Base', 'Sacral promontory', 'Ala', 'Sacral canal',
-        'Anterior sacral foramina', 'Posterior sacral foramina',
-        'Median sacral crest', 'Sacral hiatus'
-      ],
-      'scapula': [
-        'Spine', 'Acromion', 'Coracoid process', 'Glenoid cavity',
-        'Supraglenoid tubercle', 'Infraglenoid tubercle',
-        'Supraspinous fossa', 'Infraspinous fossa',
-        'Subscapular fossa', 'Inferior angle'
-      ],
-      'sphenoid bone': [
-        'Body', 'Greater wing', 'Lesser wing', 'Sella turcica',
-        'Optic canal', 'Superior orbital fissure',
-        'Medial pterygoid plate', 'Lateral pterygoid plate'
-      ],
-      'temporal bone': [
-        'Zygomatic process', 'Mandibular fossa',
-        'External acoustic meatus', 'Mastoid process',
-        'Styloid process', 'Petrous part', 'Carotid canal'
-      ],
-      'tibia': [
-        'Medial condyle', 'Lateral condyle', 'Intercondylar eminence',
-        'Tibial tuberosity', 'Anterior border', 'Soleal line',
-        'Medial malleolus', 'Fibular notch'
-      ],
-      'ulna': [
-        'Olecranon', 'Coronoid process', 'Trochlear notch',
-        'Radial notch', 'Ulnar tuberosity', 'Interosseous border',
-        'Head', 'Styloid process'
-      ],
-      'zygomatic bone': [
-        'Frontal process', 'Temporal process', 'Maxillary process',
-        'Zygomaticofacial foramen'
-      ]
-    };
-
-    // Normalized points within the fibula's bounding box. The GLB exports no
+    // Normalized points in each bone's bounding box (x right-left of left
+    // bones, y inferior-superior, z posterior-anterior). The GLB exports no
     // landmark coordinates, so these anchors are authored for this model.
-    const landmarkLocations = {
+    // Right-side instances mirror x.
+    const anatomicalLandmarks = {
+      'atlas (c1)': {
+        'Anterior arch': [0.5, 0.45, 0.95],
+        'Posterior arch': [0.5, 0.4, 0.06],
+        'Lateral mass': [0.86, 0.55, 0.5],
+        'Transverse foramen': [0.92, 0.5, 0.48],
+        'Superior articular facet': [0.72, 0.94, 0.55]
+      },
+      'axis (c2)': {
+        'Dens': [0.5, 0.98, 0.58],
+        'Body': [0.5, 0.52, 0.58],
+        'Spinous process': [0.5, 0.38, 0.06],
+        'Transverse foramen': [0.9, 0.52, 0.48],
+        'Superior articular facet': [0.72, 0.82, 0.55]
+      },
+      'calcaneus': {
+        'Calcaneal tuberosity': [0.5, 0.28, 0.06],
+        'Sustentaculum tali': [0.12, 0.72, 0.58],
+        'Peroneal trochlea': [0.9, 0.48, 0.52],
+        'Talocalcaneal facets': [0.5, 0.92, 0.58]
+      },
+      'clavicle': {
+        'Sternal end': [0.04, 0.5, 0.5],
+        'Acromial end': [0.96, 0.55, 0.52],
+        'Conoid tubercle': [0.8, 0.28, 0.38],
+        'Trapezoid line': [0.74, 0.32, 0.42],
+        'Subclavian groove': [0.5, 0.22, 0.5]
+      },
+      'femur': {
+        'Head': [0.18, 0.96, 0.55],
+        'Fovea capitis': [0.12, 0.97, 0.5],
+        'Neck': [0.36, 0.88, 0.5],
+        'Greater trochanter': [0.86, 0.86, 0.5],
+        'Lesser trochanter': [0.32, 0.78, 0.22],
+        'Intertrochanteric line': [0.55, 0.82, 0.78],
+        'Intertrochanteric crest': [0.55, 0.82, 0.22],
+        'Linea aspera': [0.5, 0.5, 0.18],
+        'Medial condyle': [0.22, 0.04, 0.5],
+        'Lateral condyle': [0.78, 0.04, 0.5],
+        'Intercondylar fossa': [0.5, 0.06, 0.22],
+        'Patellar surface': [0.5, 0.1, 0.86]
+      },
       'fibula': {
         'Head': [0.5, 0.94, 0.5],
         'Apex of head': [0.5, 1, 0.5],
@@ -451,11 +392,158 @@
         'Interosseous border': [0.25, 0.45, 0.5],
         'Lateral malleolus': [0.5, 0.03, 0.5],
         'Malleolar fossa': [0.5, 0.07, 0.2]
+      },
+      'frontal bone': {
+        'Frontal squama': [0.5, 0.82, 0.72],
+        'Supraorbital margin': [0.62, 0.32, 0.88],
+        'Supraorbital notch': [0.42, 0.34, 0.9],
+        'Glabella': [0.5, 0.42, 0.96],
+        'Zygomatic process': [0.92, 0.28, 0.7]
+      },
+      'hip bone': {
+        'Iliac crest': [0.55, 0.96, 0.5],
+        'Anterior superior iliac spine': [0.55, 0.82, 0.92],
+        'Posterior superior iliac spine': [0.48, 0.82, 0.08],
+        'Greater sciatic notch': [0.42, 0.52, 0.28],
+        'Ischial spine': [0.4, 0.38, 0.32],
+        'Ischial tuberosity': [0.42, 0.12, 0.28],
+        'Acetabulum': [0.55, 0.48, 0.62],
+        'Obturator foramen': [0.48, 0.22, 0.55],
+        'Pubic tubercle': [0.32, 0.18, 0.82]
+      },
+      'humerus': {
+        'Head': [0.42, 0.96, 0.42],
+        'Anatomical neck': [0.48, 0.9, 0.48],
+        'Surgical neck': [0.5, 0.82, 0.5],
+        'Greater tubercle': [0.78, 0.92, 0.55],
+        'Lesser tubercle': [0.55, 0.9, 0.78],
+        'Deltoid tuberosity': [0.72, 0.62, 0.55],
+        'Radial groove': [0.55, 0.48, 0.28],
+        'Capitulum': [0.78, 0.06, 0.62],
+        'Trochlea': [0.42, 0.04, 0.5],
+        'Medial epicondyle': [0.12, 0.08, 0.5],
+        'Lateral epicondyle': [0.88, 0.1, 0.5],
+        'Olecranon fossa': [0.5, 0.1, 0.12]
+      },
+      'mandible': {
+        'Body': [0.5, 0.28, 0.72],
+        'Ramus': [0.88, 0.55, 0.48],
+        'Angle': [0.9, 0.22, 0.42],
+        'Mental protuberance': [0.5, 0.18, 0.96],
+        'Mental foramen': [0.68, 0.32, 0.82],
+        'Mandibular foramen': [0.82, 0.55, 0.32],
+        'Coronoid process': [0.86, 0.92, 0.58],
+        'Condylar process': [0.88, 0.96, 0.38],
+        'Mandibular notch': [0.86, 0.82, 0.48]
+      },
+      'maxilla': {
+        'Alveolar process': [0.55, 0.12, 0.72],
+        'Frontal process': [0.42, 0.92, 0.72],
+        'Zygomatic process': [0.92, 0.48, 0.62],
+        'Palatine process': [0.5, 0.22, 0.32],
+        'Infraorbital foramen': [0.62, 0.48, 0.88],
+        'Maxillary sinus': [0.58, 0.42, 0.55]
+      },
+      'occipital bone': {
+        'Foramen magnum': [0.5, 0.22, 0.42],
+        'Occipital condyle': [0.68, 0.18, 0.48],
+        'External occipital protuberance': [0.5, 0.55, 0.08],
+        'Hypoglossal canal': [0.68, 0.2, 0.4],
+        'Superior nuchal line': [0.5, 0.48, 0.12]
+      },
+      'patella': {
+        'Base': [0.5, 0.94, 0.5],
+        'Apex': [0.5, 0.06, 0.5],
+        'Medial border': [0.12, 0.5, 0.5],
+        'Lateral border': [0.88, 0.5, 0.5],
+        'Medial articular facet': [0.32, 0.5, 0.18],
+        'Lateral articular facet': [0.68, 0.5, 0.18]
+      },
+      'radius': {
+        'Head': [0.5, 0.96, 0.5],
+        'Neck': [0.5, 0.88, 0.5],
+        'Radial tuberosity': [0.38, 0.8, 0.62],
+        'Interosseous border': [0.22, 0.5, 0.5],
+        'Ulnar notch': [0.22, 0.08, 0.5],
+        'Dorsal tubercle': [0.5, 0.08, 0.18],
+        'Styloid process': [0.78, 0.03, 0.5]
+      },
+      'sacrum': {
+        'Base': [0.5, 0.94, 0.55],
+        'Sacral promontory': [0.5, 0.92, 0.82],
+        'Ala': [0.88, 0.86, 0.5],
+        'Sacral canal': [0.5, 0.55, 0.42],
+        'Anterior sacral foramina': [0.68, 0.55, 0.82],
+        'Posterior sacral foramina': [0.68, 0.55, 0.18],
+        'Median sacral crest': [0.5, 0.5, 0.08],
+        'Sacral hiatus': [0.5, 0.08, 0.22]
+      },
+      'scapula': {
+        'Spine': [0.55, 0.68, 0.22],
+        'Acromion': [0.78, 0.86, 0.28],
+        'Coracoid process': [0.62, 0.88, 0.82],
+        'Glenoid cavity': [0.82, 0.72, 0.62],
+        'Supraglenoid tubercle': [0.8, 0.8, 0.68],
+        'Infraglenoid tubercle': [0.8, 0.62, 0.58],
+        'Supraspinous fossa': [0.45, 0.78, 0.28],
+        'Infraspinous fossa': [0.45, 0.42, 0.22],
+        'Subscapular fossa': [0.45, 0.5, 0.78],
+        'Inferior angle': [0.38, 0.06, 0.5]
+      },
+      'sphenoid bone': {
+        'Body': [0.5, 0.55, 0.5],
+        'Greater wing': [0.88, 0.48, 0.55],
+        'Lesser wing': [0.72, 0.78, 0.62],
+        'Sella turcica': [0.5, 0.62, 0.48],
+        'Optic canal': [0.42, 0.7, 0.62],
+        'Superior orbital fissure': [0.62, 0.62, 0.72],
+        'Medial pterygoid plate': [0.42, 0.18, 0.48],
+        'Lateral pterygoid plate': [0.62, 0.18, 0.42]
+      },
+      'temporal bone': {
+        'Zygomatic process': [0.72, 0.62, 0.88],
+        'Mandibular fossa': [0.55, 0.42, 0.72],
+        'External acoustic meatus': [0.62, 0.48, 0.55],
+        'Mastoid process': [0.58, 0.12, 0.32],
+        'Styloid process': [0.52, 0.08, 0.48],
+        'Petrous part': [0.38, 0.42, 0.32],
+        'Carotid canal': [0.42, 0.28, 0.42]
+      },
+      'tibia': {
+        'Medial condyle': [0.22, 0.94, 0.5],
+        'Lateral condyle': [0.78, 0.94, 0.5],
+        'Intercondylar eminence': [0.5, 0.98, 0.5],
+        'Tibial tuberosity': [0.5, 0.78, 0.88],
+        'Anterior border': [0.5, 0.48, 0.86],
+        'Soleal line': [0.5, 0.62, 0.18],
+        'Medial malleolus': [0.12, 0.04, 0.5],
+        'Fibular notch': [0.88, 0.12, 0.5]
+      },
+      'ulna': {
+        'Olecranon': [0.5, 0.97, 0.22],
+        'Coronoid process': [0.5, 0.86, 0.72],
+        'Trochlear notch': [0.5, 0.9, 0.5],
+        'Radial notch': [0.82, 0.84, 0.55],
+        'Ulnar tuberosity': [0.5, 0.78, 0.68],
+        'Interosseous border': [0.78, 0.48, 0.5],
+        'Head': [0.5, 0.08, 0.5],
+        'Styloid process': [0.42, 0.02, 0.32]
+      },
+      'zygomatic bone': {
+        'Frontal process': [0.5, 0.92, 0.55],
+        'Temporal process': [0.88, 0.52, 0.38],
+        'Maxillary process': [0.28, 0.28, 0.62],
+        'Zygomaticofacial foramen': [0.55, 0.52, 0.88]
       }
     };
 
     function landmarkKey(name = '') {
       return name.replace(/\.(?:l|r)$/i, '').toLocaleLowerCase();
+    }
+
+    function landmarksFor(name) {
+      const locations = anatomicalLandmarks[landmarkKey(name)];
+      return locations ? Object.keys(locations) : [];
     }
 
     async function main() {
@@ -804,7 +892,7 @@
           .forEach(label => label.remove());
 
         const locations = record
-          ? landmarkLocations[landmarkKey(record.name)]
+          ? anatomicalLandmarks[landmarkKey(record.name)]
           : null;
         if (!locations) return;
         landmarkLayer.hidden = false;
@@ -814,11 +902,13 @@
         const size = box.getSize(new T.Vector3());
         const candidate = new T.Vector3();
         const target = new T.Vector3();
+        const mirrorX = /\.r$/i.test(record.name);
 
         for (const [index, [name, position]] of
           Object.entries(locations).entries()) {
+          const x = mirrorX ? 1 - position[0] : position[0];
           target.set(
-            box.min.x + size.x * position[0],
+            box.min.x + size.x * x,
             box.min.y + size.y * position[1],
             box.min.z + size.z * position[2]
           );
@@ -909,9 +999,7 @@
             ? descriptions.map(([key, value]) => value).join('\n\n')
             : 'No description is embedded in this object. Its exported name is shown above.';
 
-        const landmarks = record
-          ? anatomicalLandmarks[landmarkKey(record.name)] || []
-          : [];
+        const landmarks = record ? landmarksFor(record.name) : [];
         $('landmark-list').replaceChildren(...landmarks.map(name => {
           const item = document.createElement('li');
           item.textContent = name;
@@ -933,8 +1021,7 @@
       function list() {
         const query = $('search').value.toLocaleLowerCase().trim();
         const matches = items.filter(record => {
-          const landmarks =
-            anatomicalLandmarks[landmarkKey(record.name)] || [];
+          const landmarks = landmarksFor(record.name);
           return record.name.toLocaleLowerCase().includes(query) ||
             landmarks.some(name => name.toLocaleLowerCase().includes(query));
         });
