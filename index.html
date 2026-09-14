@@ -214,6 +214,32 @@
       overflow-wrap: anywhere;
     }
 
+    .landmark-callouts {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .landmark-callouts svg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .landmark-callout-label {
+      position: absolute;
+      max-width: 42%;
+      padding: 4px 8px;
+      border: 1px solid #55d3ffaa;
+      border-radius: 5px;
+      background: #111923e8;
+      color: #e7eef5;
+      font: 12px/1.25 system-ui, sans-serif;
+      white-space: nowrap;
+    }
+
     #loading-screen {
       position: fixed;
       inset: 0;
@@ -414,6 +440,20 @@
       ]
     };
 
+    // Normalized points within the fibula's bounding box. The GLB exports no
+    // landmark coordinates, so these anchors are authored for this model.
+    const landmarkLocations = {
+      'fibula': {
+        'Head': [0.5, 0.94, 0.5],
+        'Apex of head': [0.5, 1, 0.5],
+        'Neck': [0.5, 0.84, 0.5],
+        'Shaft': [0.5, 0.52, 0.5],
+        'Interosseous border': [0.25, 0.45, 0.5],
+        'Lateral malleolus': [0.5, 0.03, 0.5],
+        'Malleolar fossa': [0.5, 0.07, 0.2]
+      }
+    };
+
     function landmarkKey(name = '') {
       return name.replace(/\.(?:l|r)$/i, '').toLocaleLowerCase();
     }
@@ -476,6 +516,15 @@
       const calloutLine = callout.querySelector('line');
       const calloutDot = callout.querySelector('circle');
       const calloutLabel = callout.querySelector('.callout-label');
+
+      const landmarkLayer = document.createElement('div');
+      landmarkLayer.className = 'landmark-callouts';
+      landmarkLayer.hidden = true;
+      landmarkLayer.innerHTML = '<svg aria-hidden="true"></svg>';
+      view.appendChild(landmarkLayer);
+
+      const landmarkSvg = landmarkLayer.querySelector('svg');
+      let modelLandmarks = [];
 
       function updateCallout() {
         if (!calloutAnchor) {
@@ -540,9 +589,70 @@
         calloutDot.setAttribute('cy', y);
       }
 
+      function updateLandmarkCallouts() {
+        if (!modelLandmarks.length) {
+          landmarkLayer.hidden = true;
+          return;
+        }
+
+        camera.updateMatrixWorld();
+        const w = view.clientWidth;
+        const h = view.clientHeight;
+        const visible = [];
+
+        for (const entry of modelLandmarks) {
+          const cameraPoint = entry.anchor.clone()
+            .applyMatrix4(camera.matrixWorldInverse);
+          const p = entry.anchor.clone().project(camera);
+          const isVisible = cameraPoint.z < 0 &&
+            Math.abs(p.x) <= 1 && Math.abs(p.y) <= 1 &&
+            Math.abs(p.z) <= 1;
+
+          entry.label.hidden = !isVisible;
+          entry.line.hidden = !isVisible;
+          entry.dot.hidden = !isVisible;
+          if (!isVisible) continue;
+
+          entry.x = (p.x + 1) * w / 2;
+          entry.y = (1 - p.y) * h / 2;
+          visible.push(entry);
+        }
+
+        // Use two tidy columns so nearby landmarks do not obscure each other.
+        for (const side of [0, 1]) {
+          const entries = visible
+            .filter(entry => entry.index % 2 === side)
+            .sort((a, b) => a.y - b.y);
+          let nextTop = 10;
+
+          for (const entry of entries) {
+            const lw = entry.label.offsetWidth;
+            const lh = entry.label.offsetHeight;
+            const top = Math.min(
+              Math.max(entry.y - lh / 2, nextTop),
+              Math.max(10, h - lh - 10)
+            );
+            const left = side === 0 ? 10 : w - lw - 10;
+
+            entry.label.style.left = left + 'px';
+            entry.label.style.top = top + 'px';
+            entry.line.setAttribute('x1', entry.x);
+            entry.line.setAttribute('y1', entry.y);
+            entry.line.setAttribute('x2', side === 0 ? left + lw : left);
+            entry.line.setAttribute('y2', top + lh / 2);
+            entry.dot.setAttribute('cx', entry.x);
+            entry.dot.setAttribute('cy', entry.y);
+            nextTop = top + lh + 6;
+          }
+        }
+
+        landmarkLayer.hidden = !visible.length;
+      }
+
       const render = () => {
         renderer.render(scene, camera);
         updateCallout();
+        updateLandmarkCallouts();
       };
 
       controls.addEventListener('change', render);
@@ -687,6 +797,70 @@
           : mesh.layers.disable(0));
       }
 
+      function setModelLandmarks(record) {
+        modelLandmarks = [];
+        landmarkSvg.replaceChildren();
+        landmarkLayer.querySelectorAll('.landmark-callout-label')
+          .forEach(label => label.remove());
+
+        const locations = record
+          ? landmarkLocations[landmarkKey(record.name)]
+          : null;
+        if (!locations) return;
+        landmarkLayer.hidden = false;
+
+        const box = new T.Box3();
+        record.meshes.forEach(mesh => box.expandByObject(mesh));
+        const size = box.getSize(new T.Vector3());
+        const candidate = new T.Vector3();
+        const target = new T.Vector3();
+
+        for (const [index, [name, position]] of
+          Object.entries(locations).entries()) {
+          target.set(
+            box.min.x + size.x * position[0],
+            box.min.y + size.y * position[1],
+            box.min.z + size.z * position[2]
+          );
+
+          let anchor = null;
+          let nearestDistance = Infinity;
+          for (const mesh of record.meshes) {
+            const attribute = mesh.geometry.getAttribute('position');
+            for (let i = 0; i < attribute.count; i++) {
+              candidate.fromBufferAttribute(attribute, i)
+                .applyMatrix4(mesh.matrixWorld);
+              const distance = candidate.distanceToSquared(target);
+              if (distance < nearestDistance) {
+                nearestDistance = distance;
+                anchor = candidate.clone();
+              }
+            }
+          }
+          if (!anchor) continue;
+
+          const line = document.createElementNS(
+            'http://www.w3.org/2000/svg', 'line'
+          );
+          line.setAttribute('stroke', '#55d3ff');
+          line.setAttribute('stroke-width', '1.25');
+          landmarkSvg.appendChild(line);
+
+          const dot = document.createElementNS(
+            'http://www.w3.org/2000/svg', 'circle'
+          );
+          dot.setAttribute('r', '3');
+          dot.setAttribute('fill', '#55d3ff');
+          landmarkSvg.appendChild(dot);
+
+          const label = document.createElement('div');
+          label.className = 'landmark-callout-label';
+          label.textContent = name;
+          landmarkLayer.appendChild(label);
+          modelLandmarks.push({ anchor, dot, index, label, line });
+        }
+      }
+
       function select(record, point = null) {
         calloutAnchor = record && point ? point.clone() : null;
         calloutLabel.textContent = record?.name || '';
@@ -721,6 +895,7 @@
           }
         }
 
+        setModelLandmarks(record);
         $('name').textContent = record?.name || 'Select a structure';
 
         const descriptions = Object.entries(record?.extras || {})
