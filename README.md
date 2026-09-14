@@ -3,6 +3,7 @@
 An interactive 3D skeletal anatomy viewer for learning bone names. 
 Select, highlight, and isolate structures with connected labels. 
 Runs locally in your browser with offline support after setup.
+Open `./dist` folder for local browsing without any other dependency.
 
 ## Credits
 
