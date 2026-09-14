@@ -160,10 +160,21 @@ if (
 const code = result.outputFiles[0].text
   .replace(/<\/script/gi, '<\\/script');
 
-const payload =
+  const payload =
   '<script id="bone-atlas-glb" type="application/octet-stream">' +
   model.toString('base64') +
-  '</script>\n<script>' + code + '</script>\n';
+  '</script>\n<script>' +
+  'requestAnimationFrame(() => setTimeout(() => {' +
+  'try {' +
+  code +
+  '} catch (error) {' +
+  'console.error(error);' +
+  'document.querySelector(".loading-spinner")?.remove();' +
+  'const message = document.getElementById("loading-message");' +
+  'if (message) message.textContent = "Could not start viewer: " + error.message;' +
+  '}' +
+  '}, 0));' +
+  '</script>\n';
 
 if (!/<\/body\s*>/i.test(output)) {
   throw new Error('Missing closing body tag.');
