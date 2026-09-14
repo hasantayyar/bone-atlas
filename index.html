@@ -73,6 +73,34 @@
       overflow-wrap: anywhere;
     }
 
+    #landmarks {
+      margin: 18px 0;
+    }
+
+    #landmarks h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #e7eef5;
+    }
+
+    #landmark-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    #landmark-list li {
+      padding: 5px 9px;
+      border: 1px solid #3a4b5e;
+      border-radius: 999px;
+      background: #1a2836;
+      color: #c8d6e2;
+      font-size: 13px;
+    }
+
     button,
     input {
       font: inherit;
@@ -251,6 +279,10 @@
 
     <h2 id="name">Select a structure</h2>
     <p id="description">Click the model or choose an object below.</p>
+    <section id="landmarks" aria-labelledby="landmarks-heading" hidden>
+      <h3 id="landmarks-heading">Anatomical landmarks</h3>
+      <ul id="landmark-list"></ul>
+    </section>
 
     <div class="actions">
       <button id="focus" disabled>Focus</button>
@@ -279,6 +311,112 @@
 
   <script type="module">
     const $ = id => document.getElementById(id);
+
+    const anatomicalLandmarks = {
+      'atlas (c1)': [
+        'Anterior arch', 'Posterior arch', 'Lateral mass',
+        'Transverse foramen', 'Superior articular facet'
+      ],
+      'axis (c2)': [
+        'Dens', 'Body', 'Spinous process', 'Transverse foramen',
+        'Superior articular facet'
+      ],
+      'calcaneus': [
+        'Calcaneal tuberosity', 'Sustentaculum tali',
+        'Peroneal trochlea', 'Talocalcaneal facets'
+      ],
+      'clavicle': [
+        'Sternal end', 'Acromial end', 'Conoid tubercle',
+        'Trapezoid line', 'Subclavian groove'
+      ],
+      'femur': [
+        'Head', 'Fovea capitis', 'Neck', 'Greater trochanter',
+        'Lesser trochanter', 'Intertrochanteric line',
+        'Intertrochanteric crest', 'Linea aspera', 'Medial condyle',
+        'Lateral condyle', 'Intercondylar fossa', 'Patellar surface'
+      ],
+      'fibula': [
+        'Head', 'Apex of head', 'Neck', 'Shaft',
+        'Interosseous border', 'Lateral malleolus', 'Malleolar fossa'
+      ],
+      'frontal bone': [
+        'Frontal squama', 'Supraorbital margin', 'Supraorbital notch',
+        'Glabella', 'Zygomatic process'
+      ],
+      'hip bone': [
+        'Iliac crest', 'Anterior superior iliac spine',
+        'Posterior superior iliac spine', 'Greater sciatic notch',
+        'Ischial spine', 'Ischial tuberosity', 'Acetabulum',
+        'Obturator foramen', 'Pubic tubercle'
+      ],
+      'humerus': [
+        'Head', 'Anatomical neck', 'Surgical neck',
+        'Greater tubercle', 'Lesser tubercle', 'Deltoid tuberosity',
+        'Radial groove', 'Capitulum', 'Trochlea',
+        'Medial epicondyle', 'Lateral epicondyle', 'Olecranon fossa'
+      ],
+      'mandible': [
+        'Body', 'Ramus', 'Angle', 'Mental protuberance',
+        'Mental foramen', 'Mandibular foramen', 'Coronoid process',
+        'Condylar process', 'Mandibular notch'
+      ],
+      'maxilla': [
+        'Alveolar process', 'Frontal process', 'Zygomatic process',
+        'Palatine process', 'Infraorbital foramen', 'Maxillary sinus'
+      ],
+      'occipital bone': [
+        'Foramen magnum', 'Occipital condyle',
+        'External occipital protuberance', 'Hypoglossal canal',
+        'Superior nuchal line'
+      ],
+      'patella': [
+        'Base', 'Apex', 'Medial border', 'Lateral border',
+        'Medial articular facet', 'Lateral articular facet'
+      ],
+      'radius': [
+        'Head', 'Neck', 'Radial tuberosity', 'Interosseous border',
+        'Ulnar notch', 'Dorsal tubercle', 'Styloid process'
+      ],
+      'sacrum': [
+        'Base', 'Sacral promontory', 'Ala', 'Sacral canal',
+        'Anterior sacral foramina', 'Posterior sacral foramina',
+        'Median sacral crest', 'Sacral hiatus'
+      ],
+      'scapula': [
+        'Spine', 'Acromion', 'Coracoid process', 'Glenoid cavity',
+        'Supraglenoid tubercle', 'Infraglenoid tubercle',
+        'Supraspinous fossa', 'Infraspinous fossa',
+        'Subscapular fossa', 'Inferior angle'
+      ],
+      'sphenoid bone': [
+        'Body', 'Greater wing', 'Lesser wing', 'Sella turcica',
+        'Optic canal', 'Superior orbital fissure',
+        'Medial pterygoid plate', 'Lateral pterygoid plate'
+      ],
+      'temporal bone': [
+        'Zygomatic process', 'Mandibular fossa',
+        'External acoustic meatus', 'Mastoid process',
+        'Styloid process', 'Petrous part', 'Carotid canal'
+      ],
+      'tibia': [
+        'Medial condyle', 'Lateral condyle', 'Intercondylar eminence',
+        'Tibial tuberosity', 'Anterior border', 'Soleal line',
+        'Medial malleolus', 'Fibular notch'
+      ],
+      'ulna': [
+        'Olecranon', 'Coronoid process', 'Trochlear notch',
+        'Radial notch', 'Ulnar tuberosity', 'Interosseous border',
+        'Head', 'Styloid process'
+      ],
+      'zygomatic bone': [
+        'Frontal process', 'Temporal process', 'Maxillary process',
+        'Zygomaticofacial foramen'
+      ]
+    };
+
+    function landmarkKey(name = '') {
+      return name.replace(/\.(?:l|r)$/i, '').toLocaleLowerCase();
+    }
 
     async function main() {
       const [T, { OrbitControls }, { GLTFLoader }, { DRACOLoader }] =
@@ -596,6 +734,16 @@
             ? descriptions.map(([key, value]) => value).join('\n\n')
             : 'No description is embedded in this object. Its exported name is shown above.';
 
+        const landmarks = record
+          ? anatomicalLandmarks[landmarkKey(record.name)] || []
+          : [];
+        $('landmark-list').replaceChildren(...landmarks.map(name => {
+          const item = document.createElement('li');
+          item.textContent = name;
+          return item;
+        }));
+        $('landmarks').hidden = !landmarks.length;
+
         const extras = record?.extras || {};
         $('metadata').textContent = JSON.stringify(extras, null, 2);
         $('details').hidden = !Object.keys(extras).length;
@@ -609,8 +757,12 @@
 
       function list() {
         const query = $('search').value.toLocaleLowerCase().trim();
-        const matches = items.filter(record =>
-          record.name.toLocaleLowerCase().includes(query));
+        const matches = items.filter(record => {
+          const landmarks =
+            anatomicalLandmarks[landmarkKey(record.name)] || [];
+          return record.name.toLocaleLowerCase().includes(query) ||
+            landmarks.some(name => name.toLocaleLowerCase().includes(query));
+        });
 
         $('count').textContent = matches.length + ' objects' +
           (matches.length > 150 ? ' · first 150 shown; narrow your search' : '');
