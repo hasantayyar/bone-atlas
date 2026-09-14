@@ -1,0 +1,14 @@
+# Bone Atlas
+
+An interactive 3D skeletal anatomy viewer for learning bone names. 
+Select, highlight, and isolate structures with connected labels. 
+Runs locally in your browser with offline support after setup.
+
+## Credits
+
+- **Models:** [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy), derived from BodyParts3D.
+- **Tools:** [Three.js](https://threejs.org/), [Google model-viewer](https://modelviewer.dev/), and [Blender](https://www.blender.org/).
+
+Model licensing and attribution: Z-Anatomy — CC BY-SA 4.0; BodyParts3D — CC BY-SA 2.1 Japan. See the original repository for details.
+
+For educational exploration, not medical diagnosis.
