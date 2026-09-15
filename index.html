@@ -68,9 +68,23 @@
     }
 
     #description,
+    #description-body,
+    #landmark-description,
     pre {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+    }
+
+    #description-panel,
+    #landmark-details {
+      margin: 12px 0 0;
+    }
+
+    #description-panel summary,
+    #landmark-details summary {
+      cursor: pointer;
+      color: #75d9ff;
+      font-weight: 600;
     }
 
     #landmarks {
@@ -92,13 +106,47 @@
       list-style: none;
     }
 
-    #landmark-list li {
+    #landmark-list button {
       padding: 5px 9px;
-      border: 1px solid #3a4b5e;
       border-radius: 999px;
       background: #1a2836;
       color: #c8d6e2;
       font-size: 13px;
+    }
+
+    #landmark-list button.active,
+    .landmark-callout-label.active {
+      border-color: #55d3ff;
+      background: #16465d;
+      color: #fff;
+    }
+
+    #landmark-details {
+      margin-top: 14px;
+      padding: 10px 14px 14px;
+      border: 1px solid #3a4b5e;
+      border-radius: 8px;
+      background: #172330;
+    }
+
+    #description-body,
+    #landmark-description {
+      max-height: min(28vh, 280px);
+      overflow-y: auto;
+      margin-top: 10px;
+      padding-right: 8px;
+      color: #c8d6e2;
+      scrollbar-gutter: stable;
+    }
+
+    #description-body p,
+    #landmark-description p {
+      margin: 0 0 10px;
+    }
+
+    #description-body p:last-child,
+    #landmark-description p:last-child {
+      margin-bottom: 0;
     }
 
     button,
@@ -238,6 +286,8 @@
       color: #e7eef5;
       font: 12px/1.25 system-ui, sans-serif;
       white-space: nowrap;
+      pointer-events: auto;
+      cursor: pointer;
     }
 
     #loading-screen {
@@ -308,9 +358,17 @@
 
     <h2 id="name">Select a structure</h2>
     <p id="description">Click the model or choose an object below.</p>
+    <details id="description-panel" hidden>
+      <summary>Description</summary>
+      <div id="description-body"></div>
+    </details>
     <section id="landmarks" aria-labelledby="landmarks-heading" hidden>
       <h3 id="landmarks-heading">Anatomical landmarks</h3>
       <ul id="landmark-list"></ul>
+      <details id="landmark-details" aria-live="polite" hidden>
+        <summary id="landmark-name"></summary>
+        <div id="landmark-description"></div>
+      </details>
     </section>
 
     <div class="actions">
@@ -341,212 +399,30 @@
   <script type="module">
     const $ = id => document.getElementById(id);
 
-    // Normalized points in each bone's bounding box (x right-left of left
-    // bones, y inferior-superior, z posterior-anterior). The GLB exports no
-    // landmark coordinates, so these anchors are authored for this model.
-    // Right-side instances mirror x.
-    const anatomicalLandmarks = {
-      'atlas (c1)': {
-        'Anterior arch': [0.5, 0.45, 0.95],
-        'Posterior arch': [0.5, 0.4, 0.06],
-        'Lateral mass': [0.86, 0.55, 0.5],
-        'Transverse foramen': [0.92, 0.5, 0.48],
-        'Superior articular facet': [0.72, 0.94, 0.55]
-      },
-      'axis (c2)': {
-        'Dens': [0.5, 0.98, 0.58],
-        'Body': [0.5, 0.52, 0.58],
-        'Spinous process': [0.5, 0.38, 0.06],
-        'Transverse foramen': [0.9, 0.52, 0.48],
-        'Superior articular facet': [0.72, 0.82, 0.55]
-      },
-      'calcaneus': {
-        'Calcaneal tuberosity': [0.5, 0.28, 0.06],
-        'Sustentaculum tali': [0.12, 0.72, 0.58],
-        'Peroneal trochlea': [0.9, 0.48, 0.52],
-        'Talocalcaneal facets': [0.5, 0.92, 0.58]
-      },
-      'clavicle': {
-        'Sternal end': [0.04, 0.5, 0.5],
-        'Acromial end': [0.96, 0.55, 0.52],
-        'Conoid tubercle': [0.8, 0.28, 0.38],
-        'Trapezoid line': [0.74, 0.32, 0.42],
-        'Subclavian groove': [0.5, 0.22, 0.5]
-      },
-      'femur': {
-        'Head': [0.18, 0.96, 0.55],
-        'Fovea capitis': [0.12, 0.97, 0.5],
-        'Neck': [0.36, 0.88, 0.5],
-        'Greater trochanter': [0.86, 0.86, 0.5],
-        'Lesser trochanter': [0.32, 0.78, 0.22],
-        'Intertrochanteric line': [0.55, 0.82, 0.78],
-        'Intertrochanteric crest': [0.55, 0.82, 0.22],
-        'Linea aspera': [0.5, 0.5, 0.18],
-        'Medial condyle': [0.22, 0.04, 0.5],
-        'Lateral condyle': [0.78, 0.04, 0.5],
-        'Intercondylar fossa': [0.5, 0.06, 0.22],
-        'Patellar surface': [0.5, 0.1, 0.86]
-      },
-      'fibula': {
-        'Head': [0.5, 0.94, 0.5],
-        'Apex of head': [0.5, 1, 0.5],
-        'Neck': [0.5, 0.84, 0.5],
-        'Shaft': [0.5, 0.52, 0.5],
-        'Interosseous border': [0.25, 0.45, 0.5],
-        'Lateral malleolus': [0.5, 0.03, 0.5],
-        'Malleolar fossa': [0.5, 0.07, 0.2]
-      },
-      'frontal bone': {
-        'Frontal squama': [0.5, 0.82, 0.72],
-        'Supraorbital margin': [0.62, 0.32, 0.88],
-        'Supraorbital notch': [0.42, 0.34, 0.9],
-        'Glabella': [0.5, 0.42, 0.96],
-        'Zygomatic process': [0.92, 0.28, 0.7]
-      },
-      'hip bone': {
-        'Iliac crest': [0.55, 0.96, 0.5],
-        'Anterior superior iliac spine': [0.55, 0.82, 0.92],
-        'Posterior superior iliac spine': [0.48, 0.82, 0.08],
-        'Greater sciatic notch': [0.42, 0.52, 0.28],
-        'Ischial spine': [0.4, 0.38, 0.32],
-        'Ischial tuberosity': [0.42, 0.12, 0.28],
-        'Acetabulum': [0.55, 0.48, 0.62],
-        'Obturator foramen': [0.48, 0.22, 0.55],
-        'Pubic tubercle': [0.32, 0.18, 0.82]
-      },
-      'humerus': {
-        'Head': [0.42, 0.96, 0.42],
-        'Anatomical neck': [0.48, 0.9, 0.48],
-        'Surgical neck': [0.5, 0.82, 0.5],
-        'Greater tubercle': [0.78, 0.92, 0.55],
-        'Lesser tubercle': [0.55, 0.9, 0.78],
-        'Deltoid tuberosity': [0.72, 0.62, 0.55],
-        'Radial groove': [0.55, 0.48, 0.28],
-        'Capitulum': [0.78, 0.06, 0.62],
-        'Trochlea': [0.42, 0.04, 0.5],
-        'Medial epicondyle': [0.12, 0.08, 0.5],
-        'Lateral epicondyle': [0.88, 0.1, 0.5],
-        'Olecranon fossa': [0.5, 0.1, 0.12]
-      },
-      'mandible': {
-        'Body': [0.5, 0.28, 0.72],
-        'Ramus': [0.88, 0.55, 0.48],
-        'Angle': [0.9, 0.22, 0.42],
-        'Mental protuberance': [0.5, 0.18, 0.96],
-        'Mental foramen': [0.68, 0.32, 0.82],
-        'Mandibular foramen': [0.82, 0.55, 0.32],
-        'Coronoid process': [0.86, 0.92, 0.58],
-        'Condylar process': [0.88, 0.96, 0.38],
-        'Mandibular notch': [0.86, 0.82, 0.48]
-      },
-      'maxilla': {
-        'Alveolar process': [0.55, 0.12, 0.72],
-        'Frontal process': [0.42, 0.92, 0.72],
-        'Zygomatic process': [0.92, 0.48, 0.62],
-        'Palatine process': [0.5, 0.22, 0.32],
-        'Infraorbital foramen': [0.62, 0.48, 0.88],
-        'Maxillary sinus': [0.58, 0.42, 0.55]
-      },
-      'occipital bone': {
-        'Foramen magnum': [0.5, 0.22, 0.42],
-        'Occipital condyle': [0.68, 0.18, 0.48],
-        'External occipital protuberance': [0.5, 0.55, 0.08],
-        'Hypoglossal canal': [0.68, 0.2, 0.4],
-        'Superior nuchal line': [0.5, 0.48, 0.12]
-      },
-      'patella': {
-        'Base': [0.5, 0.94, 0.5],
-        'Apex': [0.5, 0.06, 0.5],
-        'Medial border': [0.12, 0.5, 0.5],
-        'Lateral border': [0.88, 0.5, 0.5],
-        'Medial articular facet': [0.32, 0.5, 0.18],
-        'Lateral articular facet': [0.68, 0.5, 0.18]
-      },
-      'radius': {
-        'Head': [0.5, 0.96, 0.5],
-        'Neck': [0.5, 0.88, 0.5],
-        'Radial tuberosity': [0.38, 0.8, 0.62],
-        'Interosseous border': [0.22, 0.5, 0.5],
-        'Ulnar notch': [0.22, 0.08, 0.5],
-        'Dorsal tubercle': [0.5, 0.08, 0.18],
-        'Styloid process': [0.78, 0.03, 0.5]
-      },
-      'sacrum': {
-        'Base': [0.5, 0.94, 0.55],
-        'Sacral promontory': [0.5, 0.92, 0.82],
-        'Ala': [0.88, 0.86, 0.5],
-        'Sacral canal': [0.5, 0.55, 0.42],
-        'Anterior sacral foramina': [0.68, 0.55, 0.82],
-        'Posterior sacral foramina': [0.68, 0.55, 0.18],
-        'Median sacral crest': [0.5, 0.5, 0.08],
-        'Sacral hiatus': [0.5, 0.08, 0.22]
-      },
-      'scapula': {
-        'Spine': [0.55, 0.68, 0.22],
-        'Acromion': [0.78, 0.86, 0.28],
-        'Coracoid process': [0.62, 0.88, 0.82],
-        'Glenoid cavity': [0.82, 0.72, 0.62],
-        'Supraglenoid tubercle': [0.8, 0.8, 0.68],
-        'Infraglenoid tubercle': [0.8, 0.62, 0.58],
-        'Supraspinous fossa': [0.45, 0.78, 0.28],
-        'Infraspinous fossa': [0.45, 0.42, 0.22],
-        'Subscapular fossa': [0.45, 0.5, 0.78],
-        'Inferior angle': [0.38, 0.06, 0.5]
-      },
-      'sphenoid bone': {
-        'Body': [0.5, 0.55, 0.5],
-        'Greater wing': [0.88, 0.48, 0.55],
-        'Lesser wing': [0.72, 0.78, 0.62],
-        'Sella turcica': [0.5, 0.62, 0.48],
-        'Optic canal': [0.42, 0.7, 0.62],
-        'Superior orbital fissure': [0.62, 0.62, 0.72],
-        'Medial pterygoid plate': [0.42, 0.18, 0.48],
-        'Lateral pterygoid plate': [0.62, 0.18, 0.42]
-      },
-      'temporal bone': {
-        'Zygomatic process': [0.72, 0.62, 0.88],
-        'Mandibular fossa': [0.55, 0.42, 0.72],
-        'External acoustic meatus': [0.62, 0.48, 0.55],
-        'Mastoid process': [0.58, 0.12, 0.32],
-        'Styloid process': [0.52, 0.08, 0.48],
-        'Petrous part': [0.38, 0.42, 0.32],
-        'Carotid canal': [0.42, 0.28, 0.42]
-      },
-      'tibia': {
-        'Medial condyle': [0.22, 0.94, 0.5],
-        'Lateral condyle': [0.78, 0.94, 0.5],
-        'Intercondylar eminence': [0.5, 0.98, 0.5],
-        'Tibial tuberosity': [0.5, 0.78, 0.88],
-        'Anterior border': [0.5, 0.48, 0.86],
-        'Soleal line': [0.5, 0.62, 0.18],
-        'Medial malleolus': [0.12, 0.04, 0.5],
-        'Fibular notch': [0.88, 0.12, 0.5]
-      },
-      'ulna': {
-        'Olecranon': [0.5, 0.97, 0.22],
-        'Coronoid process': [0.5, 0.86, 0.72],
-        'Trochlear notch': [0.5, 0.9, 0.5],
-        'Radial notch': [0.82, 0.84, 0.55],
-        'Ulnar tuberosity': [0.5, 0.78, 0.68],
-        'Interosseous border': [0.78, 0.48, 0.5],
-        'Head': [0.5, 0.08, 0.5],
-        'Styloid process': [0.42, 0.02, 0.32]
-      },
-      'zygomatic bone': {
-        'Frontal process': [0.5, 0.92, 0.55],
-        'Temporal process': [0.88, 0.52, 0.38],
-        'Maxillary process': [0.28, 0.28, 0.62],
-        'Zygomaticofacial foramen': [0.55, 0.52, 0.88]
-      }
-    };
-
-    function landmarkKey(name = '') {
-      return name.replace(/\.(?:l|r)$/i, '').toLocaleLowerCase();
+    function embeddedDescription(extras = {}) {
+      return Object.entries(extras)
+        .filter(([key, value]) =>
+          /description|definition|explanation/i.test(key) &&
+          typeof value === 'string' && value.trim())
+        .map(([, value]) => value.trim())
+        .join('\n\n');
     }
 
-    function landmarksFor(name) {
-      const locations = anatomicalLandmarks[landmarkKey(name)];
-      return locations ? Object.keys(locations) : [];
+    function landmarksFor(record) {
+      return record?.landmarks || [];
+    }
+
+    function fillDescription(id, text) {
+      const paragraphs = String(text || '')
+        .split(/\n{2,}/)
+        .map(block => block.trim())
+        .filter(Boolean)
+        .map(block => {
+          const paragraph = document.createElement('p');
+          paragraph.textContent = block;
+          return paragraph;
+        });
+      $(id).replaceChildren(...paragraphs);
     }
 
     async function main() {
@@ -762,7 +638,7 @@
       );
       loader.setDRACOLoader(draco);
 
-      const gltf = await loader.loadAsync('./anatomy.glb', event => {
+      const gltf = await loader.loadAsync('./anatomy-v3.glb', event => {
         $('status').textContent = event.total
           ? 'Loading model: ' + Math.round(event.loaded / event.total * 100) + '%'
           : 'Loading model…';
@@ -797,37 +673,80 @@
       const meshToRecord = new Map();
       const meshes = [];
 
+      // In the source model, .l/.r (and unsuffixed) meshes are structures,
+      // .s/.t meshes are their landmark surfaces, and .g nodes are groups.
+      root.traverse(object => {
+        const nodeIndex = gltf.parser.associations.get(object)?.nodes;
+        const node = json.nodes?.[nodeIndex];
+        if (node?.mesh === undefined) return;
+        const suffix = node?.name?.match(/\.([a-z])$/i)?.[1]
+          .toLocaleLowerCase();
+        if (['g', 's', 't'].includes(suffix)) return;
+
+        const meshDef = json.meshes?.[node?.mesh];
+        records.set(object, {
+          name: node?.name || object.name || meshDef?.name ||
+            'Unnamed object ' + (records.size + 1),
+          extras: { ...meshDef?.extras, ...node?.extras },
+          landmarks: [],
+          meshes: [],
+          surfaceMeshes: [],
+          shown: true
+        });
+      });
+
       root.traverse(mesh => {
         if (!mesh.isMesh) return;
-        meshes.push(mesh);
-
-        // Find the original exported object, including multi-material objects.
-        let owner = mesh, node;
-        for (let p = mesh; p && p !== root; p = p.parent) {
-          const index = gltf.parser.associations.get(p)?.nodes;
-          const candidate = json.nodes?.[index];
-          if (candidate?.mesh !== undefined) {
-            owner = p;
-            node = candidate;
-            break;
-          }
-        }
-
-        if (!records.has(owner)) {
-          const meshDef = json.meshes?.[node?.mesh];
-          records.set(owner, {
-            name: node?.name || owner.userData.name || owner.name ||
-              meshDef?.name || 'Unnamed object ' + (records.size + 1),
-            extras: { ...meshDef?.extras, ...node?.extras },
-            meshes: [],
-            shown: true
-          });
-        }
+        let owner = mesh;
+        while (owner && !records.has(owner)) owner = owner.parent;
+        if (!owner) return;
 
         const record = records.get(owner);
         record.meshes.push(mesh);
         meshToRecord.set(mesh, record);
+        meshes.push(mesh);
         mesh.layers.enable(0);
+
+        let parent = mesh;
+        let belongsToLandmark = false;
+        while (parent && parent !== owner) {
+          const nodeIndex = gltf.parser.associations.get(parent)?.nodes;
+          const nodeName = json.nodes?.[nodeIndex]?.name || '';
+          if (/\.[st]$/i.test(nodeName)) {
+            belongsToLandmark = true;
+            break;
+          }
+          parent = parent.parent;
+        }
+        if (!belongsToLandmark) record.surfaceMeshes.push(mesh);
+      });
+
+      root.traverse(object => {
+        const nodeIndex = gltf.parser.associations.get(object)?.nodes;
+        const node = json.nodes?.[nodeIndex];
+        const suffix = node?.name?.match(/\.([st])$/i)?.[1];
+        if (!suffix) return;
+
+        let owner = object.parent;
+        while (owner && !records.has(owner)) owner = owner.parent;
+        if (!owner) return;
+
+        const record = records.get(owner);
+        const name = node.name.replace(/\.[st]$/i, '');
+        const boneName = record.name.replace(/\.[lr]$/i, '');
+        if (name.toLocaleLowerCase() === boneName.toLocaleLowerCase()) return;
+
+        const childDescription = object.children
+          .map(child => embeddedDescription(child.userData))
+          .filter(Boolean)
+          .join('\n\n');
+        record.landmarks.push({
+          description: embeddedDescription(object.userData) ||
+            childDescription,
+          extras: object.userData,
+          name,
+          object
+        });
       });
 
       const items = [...records.values()]
@@ -837,6 +756,7 @@
         throw new Error('No selectable mesh objects found in anatomy.glb');
 
       let selected = null;
+      let selectedLandmark = null;
       let restores = [];
 
       const bounds = new T.Box3().setFromObject(root);
@@ -888,49 +808,92 @@
           : mesh.layers.disable(0));
       }
 
+      function selectLandmark(record, landmark) {
+        if (!record || record !== selected) return;
+        selectedLandmark = landmark;
+
+        for (const entry of modelLandmarks) {
+          const active = entry.landmark === landmark;
+          entry.label.classList.toggle('active', active);
+          entry.label.setAttribute('aria-pressed', String(active));
+        }
+
+        $('landmark-list').querySelectorAll('button').forEach(button => {
+          const active = button.landmark === landmark;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', String(active));
+        });
+
+        $('landmark-name').textContent = landmark.name;
+        fillDescription(
+          'landmark-description',
+          landmark.description ||
+            'No description is embedded for this landmark.'
+        );
+        const landmarkDetails = $('landmark-details');
+        landmarkDetails.hidden = false;
+        landmarkDetails.open = true;
+        landmarkDetails.scrollIntoView({
+          behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'auto'
+            : 'smooth',
+          block: 'nearest'
+        });
+      }
+
+      function surfaceAnchor(record, landmarkObject) {
+        const landmarkBounds = new T.Box3().setFromObject(landmarkObject);
+        const target = landmarkBounds.isEmpty()
+          ? landmarkObject.getWorldPosition(new T.Vector3())
+          : landmarkBounds.getCenter(new T.Vector3());
+        const triangle = new T.Triangle();
+        const a = new T.Vector3();
+        const b = new T.Vector3();
+        const c = new T.Vector3();
+        const point = new T.Vector3();
+        let anchor = null;
+        let nearestDistance = Infinity;
+
+        for (const mesh of record.surfaceMeshes) {
+          const position = mesh.geometry.getAttribute('position');
+          const indices = mesh.geometry.index;
+          const count = indices ? indices.count : position.count;
+
+          for (let i = 0; i + 2 < count; i += 3) {
+            const vertexIndex = offset =>
+              indices ? indices.getX(i + offset) : i + offset;
+            a.fromBufferAttribute(position, vertexIndex(0))
+              .applyMatrix4(mesh.matrixWorld);
+            b.fromBufferAttribute(position, vertexIndex(1))
+              .applyMatrix4(mesh.matrixWorld);
+            c.fromBufferAttribute(position, vertexIndex(2))
+              .applyMatrix4(mesh.matrixWorld);
+            triangle.set(a, b, c).closestPointToPoint(target, point);
+
+            const distance = point.distanceToSquared(target);
+            if (distance < nearestDistance) {
+              nearestDistance = distance;
+              anchor = point.clone();
+            }
+          }
+        }
+
+        return anchor || target;
+      }
+
       function setModelLandmarks(record) {
         modelLandmarks = [];
         landmarkSvg.replaceChildren();
         landmarkLayer.querySelectorAll('.landmark-callout-label')
           .forEach(label => label.remove());
 
-        const locations = record
-          ? anatomicalLandmarks[landmarkKey(record.name)]
-          : null;
-        if (!locations) return;
+        const landmarks = landmarksFor(record);
+        if (!landmarks.length) return;
         landmarkLayer.hidden = false;
 
-        const box = new T.Box3();
-        record.meshes.forEach(mesh => box.expandByObject(mesh));
-        const size = box.getSize(new T.Vector3());
-        const candidate = new T.Vector3();
-        const target = new T.Vector3();
-        const mirrorX = /\.r$/i.test(record.name);
-
-        for (const [index, [name, position]] of
-          Object.entries(locations).entries()) {
-          const x = mirrorX ? 1 - position[0] : position[0];
-          target.set(
-            box.min.x + size.x * x,
-            box.min.y + size.y * position[1],
-            box.min.z + size.z * position[2]
-          );
-
-          let anchor = null;
-          let nearestDistance = Infinity;
-          for (const mesh of record.meshes) {
-            const attribute = mesh.geometry.getAttribute('position');
-            for (let i = 0; i < attribute.count; i++) {
-              candidate.fromBufferAttribute(attribute, i)
-                .applyMatrix4(mesh.matrixWorld);
-              const distance = candidate.distanceToSquared(target);
-              if (distance < nearestDistance) {
-                nearestDistance = distance;
-                anchor = candidate.clone();
-              }
-            }
-          }
-          if (!anchor) continue;
+        for (const [index, landmark] of landmarks.entries()) {
+          const anchor = surfaceAnchor(record, landmark.object);
+          const name = landmark.name;
 
           const line = document.createElementNS(
             'http://www.w3.org/2000/svg', 'line'
@@ -946,11 +909,18 @@
           dot.setAttribute('fill', '#55d3ff');
           landmarkSvg.appendChild(dot);
 
-          const label = document.createElement('div');
+          const label = document.createElement('button');
+          label.type = 'button';
           label.className = 'landmark-callout-label';
           label.textContent = name;
+          label.setAttribute('aria-label',
+            `Show description for ${name} of ${record.name}`);
+          label.setAttribute('aria-pressed', 'false');
+          label.onclick = () => selectLandmark(record, landmark);
           landmarkLayer.appendChild(label);
-          modelLandmarks.push({ anchor, dot, index, label, line });
+          modelLandmarks.push({
+            anchor, dot, index, label, landmark, line, name
+          });
         }
       }
 
@@ -965,6 +935,13 @@
 
         restores = [];
         selected = record;
+        selectedLandmark = null;
+        $('landmark-details').hidden = true;
+        $('landmark-details').open = false;
+        $('landmark-description').replaceChildren();
+        $('description-panel').hidden = true;
+        $('description-panel').open = false;
+        $('description-body').replaceChildren();
 
         if (record) {
           setShown(record, true);
@@ -991,21 +968,28 @@
         setModelLandmarks(record);
         $('name').textContent = record?.name || 'Select a structure';
 
-        const descriptions = Object.entries(record?.extras || {})
-          .filter(([key, value]) =>
-            /description|definition|explanation/i.test(key) &&
-            typeof value === 'string' && value.trim());
+        const boneText = record ? embeddedDescription(record.extras) : '';
+        $('description').hidden = Boolean(record);
+        $('description').textContent =
+          'Click the model or choose an object below.';
+        $('description-panel').hidden = !record;
+        $('description-panel').open = false;
+        fillDescription(
+          'description-body',
+          boneText || 'No description is embedded in this object.'
+        );
 
-        $('description').textContent = !record
-          ? 'Click the model or choose an object below.'
-          : descriptions.length
-            ? descriptions.map(([key, value]) => value).join('\n\n')
-            : 'No description is embedded in this object. Its exported name is shown above.';
-
-        const landmarks = record ? landmarksFor(record.name) : [];
-        $('landmark-list').replaceChildren(...landmarks.map(name => {
+        const landmarks = landmarksFor(record);
+        $('landmark-list').replaceChildren(...landmarks.map(landmark => {
           const item = document.createElement('li');
-          item.textContent = name;
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = landmark.name;
+          button.landmark = landmark;
+          button.setAttribute('aria-pressed',
+            String(selectedLandmark === landmark));
+          button.onclick = () => selectLandmark(record, landmark);
+          item.appendChild(button);
           return item;
         }));
         $('landmarks').hidden = !landmarks.length;
@@ -1024,9 +1008,10 @@
       function list() {
         const query = $('search').value.toLocaleLowerCase().trim();
         const matches = items.filter(record => {
-          const landmarks = landmarksFor(record.name);
+          const landmarks = landmarksFor(record);
           return record.name.toLocaleLowerCase().includes(query) ||
-            landmarks.some(name => name.toLocaleLowerCase().includes(query));
+            landmarks.some(landmark =>
+              landmark.name.toLocaleLowerCase().includes(query));
         });
 
         $('count').textContent = matches.length + ' objects' +
@@ -1124,8 +1109,12 @@
         );
       });
 
-      $('status').textContent =
-        items.length + ' selectable objects · loaded locally';
+      const landmarkCount = items.reduce(
+        (count, record) => count + record.landmarks.length, 0
+      );
+      $('status').textContent = items.length +
+        ' selectable objects · ' + landmarkCount +
+        ' embedded landmarks · loaded locally';
 
       if (items.length === 1)
         $('status').textContent += ' · Only one object was exported';
